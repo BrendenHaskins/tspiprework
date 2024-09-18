@@ -8,7 +8,7 @@ const target : HTMLElement | null = document.getElementById('target');
 const height : number = window.innerHeight;
 const width : number = window.innerWidth;
 
-//TODO: remember what this is
+//when a starting position is chosen along the y axis, it cannot be less than this value, or greather than the height minus this value
 const padding : number = 100;
 
 //total amount of lines to draw
@@ -55,7 +55,6 @@ const canvas = SVG()
  * Very small corners showing on pipes
  * refactor ugly code
  * add seed to make animations consistent?
- * colors dont work right yet
  */
 
 //BASIC CONCEPT:
