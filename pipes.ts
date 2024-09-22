@@ -51,7 +51,7 @@ declare const SVG: any;
 
 
 const canvas = SVG()
-    .addTo('body')
+    .addTo('.target')
     .size(width, height);
 
     window.addEventListener('DOMContentLoaded', (e)=> {

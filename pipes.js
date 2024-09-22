@@ -32,7 +32,7 @@ var allInstructions = [];
 //a string to hold a seed of all instructions
 var instructionSeed = "";
 var canvas = SVG()
-    .addTo('body')
+    .addTo('.target')
     .size(width, height);
 window.addEventListener('DOMContentLoaded', function (e) {
     while (pipeCount <= totalPipesToDraw) {
