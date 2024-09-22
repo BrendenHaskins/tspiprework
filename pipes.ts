@@ -1,132 +1,218 @@
 //brenden haskins
-//pipes visual rework
-
-//constants to represent the canvas element to place SVG onto
-const target : HTMLElement | null = document.getElementById('target');
 
 //dimensions of the canvas element
 const height : number = window.innerHeight;
 const width : number = window.innerWidth;
 
-//when a starting position is chosen along the y axis, it cannot be less than this value, or greather than the height minus this value
-const padding : number = 100;
-
 //total amount of lines to draw
 const lineCount : number = 10;
 
-//width of a line
-const choosenWidth : number = 6
+/**
+ * amount of space (in pixels) along which a pipe may not start on a given axis
+ * for my sake, this means that a margin of 100 will not allow a pipe to start on the 
+ * first 100 or last one hundred pixels of a viewport's inner dimension.
+ * 
+ * for responsive purposes, this should be proportional to either height or width.
+ */
+const xMargin : number = Math.floor(width/10);
+const yMargin : number = Math.floor(height/10);
 
-//length of drawing animations in ms
-const animationTime : number = 1000;
+//width of a pipe
+const CHOSEN_WIDTH : number = 6;
+
+//total pipes to draw, where a single pipe starts along the border and randomly moves until it hits a border
+const totalPipesToDraw : number = 10;
+
+//total pipes drawn so far
+let pipeCount : number = 0;
+
+//animation time constant
+const ANIMATION_TIME = 1000;
+
+//wait time
+let currentWaitTime = 0;
+
+//how much to increment the wait time in ms
+const INCREMENT_WAIT_TIME = 1000;
+
+//color array for changing chosen color, adds a sense of depth to the animation
+const allColors : string[] = ['blue', 'cyan', 'dodgerblue', 'lightblue', 'aquamarine', 'darkseagreen', 'deepskyblue', 'darkblue', 'darkslateblue', 'lavender'];
+
+//all instructions to execute
+let allInstructions : PipeInstruction[] = [];
+
+//a string to hold a seed of all instructions
+let instructionSeed : string = "";
+
+
 
 //SVG class constant for calling methods
 declare const SVG: any;
-
-//variables for adjusting the apperance of a line
-let chosenColor : string = 'dodgerblue';
-let colorCount : number = 0;
-let colors : string[] = ['blue', 'cyan', 'dodgerblue', 'lightblue'];
-
-//variable for tracking where the current line is
-let currentPipePos : number[] = [0,0];
-
-//how long to wait before starting the animation
-let waitTime : number = 0;
-
-//how many times a line has began (started from the edge of the canvas)
-let totalSpinups : number = 0;
-
-//boolean switch to determine if a drawing process is the first in a line's lifespan
-let spinUp : boolean = true;
 
 
 const canvas = SVG()
     .addTo('body')
     .size(width, height);
 
+    window.addEventListener('DOMContentLoaded', (e)=> {
+        while(pipeCount <= totalPipesToDraw) {
+            generateInitialInstruction();
+        }
 
+        allInstructions.forEach(executePipeInstruction);
+        instructionSeed = JSON.stringify(allInstructions);
+        console.log(instructionSeed);
 
-//NOTES: 
-/**
- * How can i get rid of the small padding around the SVG? the sbg is an html element after all.
- * Sometimes pipes draw in the same direction twice?
- * Pipes should change color to show depth
- * Very small corners showing on pipes
- * refactor ugly code
- * add seed to make animations consistent?
- */
+    });
 
-//BASIC CONCEPT:
-/**
- * firstly decide where on the edge of canvas to start
- * draw a 'line' that is a vector of the starting point
- * get a new coordinate to draw too
- * call pipeObject.animate()
- */
+//animate function
+function executePipeInstruction(input : PipeInstruction) : void {
+    //extract values from input PipeInstruction obj
+    let oldPosition : number[] = input.oldPosition;
+    let newPosition : number[] = input.newPosition;
+    let chosenColor : string = input.chosenColor;
+    let chosenWidth : number = input.chosenWidth;
+    let animationTime : number = input.animationTime;
+    let waitTime : number = input.waitTime;
 
-
-window.addEventListener('DOMContentLoaded', (e)=> {
-    
-    
-    while(totalSpinups < lineCount) {
-        drawNewRandomPipe(Math.random() >= 0.5, Math.random() >= 0.5, Math.random()*10);
-    }
-    console.log('loaded');
-})
-
-
-function drawNewRandomPipe(isMovingVertically : boolean, isMovingNorthWest: boolean, count : number) {
-    if(spinUp) {
-        if(count < 1) {return;}
-        isMovingVertically ? currentPipePos = [getRandomInt(50, width-50), 0] : currentPipePos = [0, getRandomInt(padding,height-padding)];
-        colorCount++;
-        chosenColor = colors[colorCount % 4];
-        totalSpinups++;
-        spinUp = false;
-    }
-
-    //determine movement up/left OR down/right
-    let coefficientChange : number;
-    isMovingNorthWest == true? coefficientChange = 1 :  coefficientChange = -1;
-
-    if(isMovingVertically) {
-        //take the x coord of current position, change the y coord
-
-        let initialPipe = canvas.line(currentPipePos[0], currentPipePos[1], currentPipePos[0], currentPipePos[1]).stroke({color: chosenColor, width:6});;
-        let newYcoord = currentPipePos[1]+getRandomInt((50*coefficientChange),(400*coefficientChange));
-
-        if(newYcoord > height) {spinUp = true; newYcoord = height; totalSpinups++;}
-        if(newYcoord < 0) {spinUp = true; newYcoord = 0; totalSpinups++;}
-
-        initialPipe.animate(animationTime, waitTime).plot(currentPipePos[0], currentPipePos[1], currentPipePos[0], newYcoord);
-
-        currentPipePos[1] = newYcoord;
-    } else {
-        //take the y coord of the current position, change the x coord
-
-        let initialPipe = canvas.line(currentPipePos[0], currentPipePos[1], currentPipePos[0], currentPipePos[1]).stroke({color: chosenColor, width:6});;
-        let newXcoord = currentPipePos[0]+getRandomInt((50*coefficientChange),(400*coefficientChange));
-
-        if(newXcoord > width) {spinUp = true; newXcoord = width; totalSpinups++;}
-        if(newXcoord < 0) {spinUp = true; newXcoord = 0; totalSpinups++;};
-
-        initialPipe.animate(animationTime, waitTime).plot(currentPipePos[0], currentPipePos[1], newXcoord, currentPipePos[1]);
-
-        currentPipePos[0] = newXcoord;
-
-    }
-    
-    waitTime += animationTime;
-    console.log(`DNRP => spinUp ${spinUp}, MV ${isMovingVertically}, NW ${isMovingNorthWest}, wait ${waitTime}`);
-
-    //ATEMPT FIX BY CHANGING SECOND VARIABLE TO BE !isMovingNorthWest, used to be Math.random() >= 0.5
-    drawNewRandomPipe(!isMovingVertically, Math.random() >=0.5, count-1);
+    //execute 
+    let initialPipe = canvas.line(input.oldPosition[0], input.oldPosition[1], oldPosition[0], oldPosition[1]).stroke({color: chosenColor, width: chosenWidth});
+    initialPipe.animate(animationTime, waitTime).plot(oldPosition[0], oldPosition[1], newPosition[0], newPosition[1]);
 }
 
-function getRandomInt(min: number, max: number) {
+//generate non-initial instructions
+function generateNewInstruction(oldPosition : number[], isMovingAlongYAxis : boolean, isMovingNorthEast : boolean) : void {
+    //distance in pixels to jump, must be changed
+    let distance : number = 0
+
+    //track if instruction will cause a line to reach a border of the viewport (neccesitates termination of this pipe)
+    let hasReachedBorder : boolean = false;
+
+    /**
+    *if statements to logically sort out how to change distance
+    *for my sake, if a pipe is moving along the y axis, if it is moving North,
+    *generate a new position containing a lesser y (index 1 - second number)
+    *
+    *a pipe should move no less the margin of the travelling axis, and no more than the travelling axis size minus it's respective margin
+    */ 
+    if(isMovingAlongYAxis) {
+        distance = generateRandomNumber(yMargin, height-yMargin);
+    } else {
+        distance = generateRandomNumber(xMargin, width-xMargin);
+    }
+
+    //if moving north or east, we should approach zero (distance should be negative)
+    if(isMovingNorthEast) { distance = distance * -1; }
+
+    let newPosition : number[] = [oldPosition[0], oldPosition[1]];
+
+    if(isMovingAlongYAxis) {
+        newPosition[1] = newPosition[1] + distance;
+        if(newPosition[1] <= 0) {
+            newPosition[1] = 0;
+            hasReachedBorder = true;
+        }
+        if(newPosition[1] >= height) {
+            newPosition[1] = height;
+            hasReachedBorder = true;
+        }
+    } else {
+        newPosition[0] = newPosition[0] + distance;
+        if(newPosition[0] <= 0) {
+            newPosition[0] = 0;
+            hasReachedBorder = true;
+        }
+        if(newPosition[0] >= width) {
+            newPosition[0] = width;
+            hasReachedBorder = true;
+        }
+    }
+
+    let inputInstruction : PipeInstruction =  {
+        oldPosition : oldPosition,
+        newPosition : newPosition,
+        chosenColor : allColors[pipeCount % allColors.length],
+        chosenWidth : CHOSEN_WIDTH,
+        animationTime : ANIMATION_TIME,
+        waitTime : currentWaitTime += INCREMENT_WAIT_TIME
+    };
+
+    allInstructions.push(inputInstruction);
+
+    //if we have not reached a border, we must continue creating instructions for this pipe
+    if(!hasReachedBorder) {
+        generateNewInstruction(newPosition, !isMovingAlongYAxis, generateRandomBoolean());
+    }
+}
+
+//generate initial instructions
+function generateInitialInstruction() : void {
+    //remember to track how many initial instructions have been issued
+    pipeCount = pipeCount + 1;
+
+    //two index arrays for creating an instruction, both indexes must be changed (x,y)
+    let oldPosition : number[] = [-10,-10];
+
+    //randomly choose which direction to go in
+    let isMovingAlongYAxis : boolean = generateRandomBoolean();
+    let isStartingTopRight : boolean = generateRandomBoolean();
+
+    //a pipe starting at the top of viewport cannot move north, at the rightmost point cannot move east
+    let isMovingNorthEast : boolean = !isStartingTopRight;
+
+    //use chosen direction to dictate starting point (to move vertically, a pipe must begin along the x axis)
+    isMovingAlongYAxis == true ? oldPosition[0] = generateRandomNumber(xMargin, width-xMargin) : oldPosition[1] = generateRandomNumber(yMargin, height-yMargin);
+
+    //other index must be set to minimum value or maximum value
+    let minOrMax : number;
+    if(isStartingTopRight) {
+        minOrMax = 0;
+    } else {
+        isMovingAlongYAxis == true ? minOrMax = height : minOrMax = width;
+    }
+    oldPosition[oldPosition.indexOf(-10)] = minOrMax;
+
+    generateNewInstruction(oldPosition, isMovingAlongYAxis, isMovingNorthEast);
+}
+
+//a reasonable man is driven to write a random boolean function
+function generateRandomBoolean() : boolean {
+    return Math.random()  < 0.5; 
+}
+
+//generate random number
+function generateRandomNumber(min: number, max: number) {
     let minCeiled = Math.ceil(min);
     let maxFloored = Math.floor(max);
     return Math.floor(Math.random() * (maxFloored - minCeiled) + minCeiled);
-  }
+}
+
+//declare class
+class PipeInstruction  {
+    oldPosition : number[];
+    newPosition : number[];
+    chosenColor : string;
+    chosenWidth : number;
+    animationTime : number;
+    waitTime : number;
+
+    constructor(
+        oldPosition : number[],
+        newPosition : number[],
+        chosenColor : string,
+        chosenWidth : number,
+        animationTime : number,
+        waitTime : number
+        ) 
+        {
+            this.oldPosition = oldPosition;
+            this.newPosition = newPosition;
+            this.chosenColor = chosenColor;
+            this.chosenWidth = chosenWidth;
+            this.animationTime = animationTime;
+            this.waitTime = waitTime;
+        }
+
+}
+
 
